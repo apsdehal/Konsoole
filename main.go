@@ -1,30 +1,30 @@
 package main 
 
 import (
-	// "github.com/miekg/pcap"
 	"github.com/akrennmair/gopcap"
 	"fmt"
 	"strings"
-	"net/http"
-	// "encoding/binary"
-	// "strconv"
 	"bytes"
 	"os"
 	"bufio"
-	// "time"
+	"regexp"
+	"time"
 )
 
 var outWriter *bufio.Writer 
 var errWriter *bufio.Writer
 
-type RequestPacket struct {
+type Request struct {
 	SrcIp     string
 	DestIp    string
 	SrcPort   uint16
 	DestPort  uint16
-	Time      string
+	Time      time.Time
 	Method 	  string
-	Flags     string
+	Host 	  string
+	HTTPType  int
+	UserAgent string
+	Path 	  string
 }
 
 func Init() *pcap.Pcap {
@@ -50,21 +50,43 @@ func Init() *pcap.Pcap {
 
 func StringFromPacket(pkt *pcap.Packet) string {
 	buf := bytes.NewBufferString("")
-	// payload := binary.BigEndian.Uint16(pkt.Payload[0:2])
-	// fmt.Println(pkt.Payload)
 	for i := uint32(0); int(i) < len(pkt.Data); i++ {
-		if pkt.Data[i] >= 65 && pkt.Data[i] <=122 {
-			fmt.Fprintf(buf, "%c", pkt.Data[i])
-		}
+		fmt.Fprintf(buf, "%c", pkt.Data[i])
 	}
 	return string(buf.Bytes())
 }
 
-func PrintPacket(r RequestPacket) {
-	// var s string = "%s %s %d %d %s %s"
-	// msg := fmt.Sprintf(s, r.SrcIp, r.DestIp, r.SrcPort, r.DestPort, r.Time, r.Flags)
-	fmt.Println(r.Method, r.SrcIp, r.DestIp, r.SrcPort, r.DestPort)
+func ParsePayload(pktString string, ip *pcap.Iphdr, tcp *pcap.Tcphdr, method string) Request {
+	SrcIp    := ip.SrcAddr()
+	DestIp   := ip.DestAddr()
+	SrcPort  := tcp.SrcPort
+	DestPort := tcp.DestPort
+
+	reqRegex, _		  := regexp.Compile("/(.+)\\s+HTTP/1.([01])\\s+")
+	hostRegex, _      := regexp.Compile("Host: (.+)\\s+")
+	useragentRegex, _ := regexp.Compile("User-Agent:(.+)")
+
+	host 	  := hostRegex.FindStringSubmatch(pktString)[1] 
+	useragent := useragentRegex.FindStringSubmatch(pktString)[1] 
+	req  	  := reqRegex.FindStringSubmatch(pktString) 
+	path 	  := req[1]
+	httpType  := req[2]
+
+	rp := Request{ 
+					SrcIp, 
+					DestIp, 
+					SrcPort, 
+					DestPort, 
+					time.Now(), 
+					method,
+					host, 
+					int(httpType[0]), 
+					useragent, 
+					path,
+				}
+	return rp
 }
+
 func DecodePacket(pkt *pcap.Packet ) {
 	httpMethods := [...]string{"OPTIONS", "GET", "HEAD", "POST", "PUT", "DELETE", "TRACE", "CONNECT"}
 
@@ -75,16 +97,8 @@ func DecodePacket(pkt *pcap.Packet ) {
 			pktString := StringFromPacket(pkt)
 			for _, method := range httpMethods {
 				if strings.Contains(pktString, method) {
-					rp := RequestPacket{ ip.SrcAddr(), ip.DestAddr(), tcp.SrcPort, tcp.DestPort, "yo", method, tcp.FlagsString() }
-					PrintPacket(rp)
-					unparsedReqs := strings.Split(pktString, method)
-					for _, unparsed := range unparsedReqs {
-							req, err := http.ReadRequest(bufio.NewReader(strings.NewReader(method + unparsed)))
-						// if err == nil {
-							rp := RequestPacket{ ip.SrcAddr(), ip.DestAddr(), tcp.SrcPort, tcp.DestPort, "yo", method, tcp.FlagsString() }
-							PrintPacket(rp)
-						// }	
-					}
+					req := ParsePayload(pktString, ip, tcp, method)
+					fmt.Println(req.Time)
 				}
 			}
 		}
@@ -95,10 +109,10 @@ func main () {
 	outWriter = bufio.NewWriter(os.Stdout)
 	errWriter = bufio.NewWriter(os.Stderr)
 
-	c := Init()
-	for pkt := c.Next();; pkt = c.Next() {
+	handleToDevice := Init()
+	for {
+		pkt := handleToDevice.Next()
 		if pkt != nil {
-			// fmt.Println(pkt.Data)
 			pkt.Decode()
 			DecodePacket(pkt)
 		}
