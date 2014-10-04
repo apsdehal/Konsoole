@@ -39,7 +39,7 @@ func GUILayout(g *gocui.Gui) error {
 	}
 	requests := []Request{}
 
-	content, err := ioutil.ReadFile("./log.txt")
+	content, err := ioutil.ReadFile(fileToOpen)
 	if err != nil {
 		panic(err)
 	}

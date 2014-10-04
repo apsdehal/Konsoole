@@ -31,10 +31,19 @@ func Init() *pcap.Pcap {
 		fmt.Fprintf(errWriter, "[-] No devices found, quitting!")
 		os.Exit(1)
 	}
-	// for _, x := range devices {
-	// 	fmt.Println(x.Name)
-	// }
-	handle, err := pcap.Openlive(devices[1].Name, 65535, true, 0)
+
+	fmt.Println("Select one of the devices:")
+	var i int = 1
+	for _, x := range devices {
+		fmt.Println(i, x.Name)
+		i++
+	}
+
+	var index int
+
+	fmt.Scanf("%d", &index)
+
+	handle, err := pcap.Openlive(devices[index-1].Name, 65535, true, 0)
 	if err != nil {
 		fmt.Fprintf(errWriter, "Konsoole: %s\n", err)
 		errWriter.Flush()
@@ -93,7 +102,7 @@ func DecodePacket(pkt *pcap.Packet ) {
 					req, err := ParsePayload(pktString, ip, tcp, method)
 					if err == nil {
 						logToFile(req)
-						InitGUI()
+						go InitGUI()
 					}
 				}
 			}
