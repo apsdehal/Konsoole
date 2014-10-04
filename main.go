@@ -91,12 +91,16 @@ func GUILayout(g *gocui.Gui) error {
 
 	maxX, maxY :=  g.Size()
 	
-	if v, err := g.SetView("main-view", 30, -1, maxX, maxY); err != nil {
+	if v, err := g.SetView("main-view", 15, -1, maxX, maxY); err != nil {
 		if err != gocui.ErrorUnkView {
 			return err
 		}
 		for _, request := range requests {
-			fmt.Fprintln(v, request.Method, ":", request.Host)
+			timeWithZone := strings.Split(request.Time, "T")
+			dateWithYear := timeWithZone[0]
+			date := strings.SplitN(dateWithYear, "-", 2)[1]
+			time := strings.Split(timeWithZone[1], "+")[0]
+			fmt.Fprintf(v, "%s %s ▶ %s : %s\n", date, time, request.Method, request.Host)
 		}
 		v.Highlight = true
 		if err := g.SetCurrentView("main-view"); err != nil {
@@ -104,12 +108,14 @@ func GUILayout(g *gocui.Gui) error {
 		}
 	}
 	
-	if v, err := g.SetView("side-view", -1, -1, 30, maxY); err != nil {
+	if v, err := g.SetView("side-view", -1, -1, 15, maxY); err != nil {
 		if err != gocui.ErrorUnkView {
 			return err
 		}
 		for key, value := range requestCount {
-			fmt.Fprintln(v, "%.8s %s", key, value)
+			if value != 0 {
+				fmt.Fprintf(v, "%-8s %d\n", key, value)
+			}
 		}
 	}
 	return nil
@@ -269,11 +275,6 @@ func ParsePayload(pktString string, ip *pcap.Iphdr, tcp *pcap.Tcphdr, method str
 	path 	    := req[1]
 	httpType    := req[2]
 
-	// fmt.Println(DestIp)
-	// fmt.Println(method)
-	// fmt.Println(host)
-	// fmt.Println(httpType[0])
-	// fmt.Println(useragent)
 	rp := Request{ 
 					DestIp, 
 					time.Now().Format(time.RFC3339), 
@@ -323,14 +324,14 @@ func DecodePacket(pkt *pcap.Packet ) {
 func main () {
 	outWriter = bufio.NewWriter(os.Stdout)
 	errWriter = bufio.NewWriter(os.Stderr)
-	// handleToDevice := Init()
-	InitGUI()
-
-	// for {
-	// 	pkt := handleToDevice.Next()
-	// 	if pkt != nil {
-	// 		pkt.Decode()
-	// 		DecodePacket(pkt)
-	// 	}
-	// }
+	handleToDevice := Init()
+	go InitGUI()
+	for {
+		pkt := handleToDevice.Next()
+		if pkt != nil {
+			pkt.Decode()
+			DecodePacket(pkt)
+			go InitGUI()
+		}
+	}
 }
