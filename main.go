@@ -12,11 +12,13 @@ import (
 	"time"
 	"io/ioutil"
 	"errors"
+	"github.com/nsf/termbox-go"
 )
 
 var outWriter *bufio.Writer 
 var errWriter *bufio.Writer
 
+var gui *gocui.Gui
 type Request struct {
 	DestIp    string
 	Time      string
@@ -49,20 +51,21 @@ func Init() *pcap.Pcap {
 }
 
 func InitGUI() {
-	g := gocui.NewGui()
-	if err := g.Init(); err != nil {
+	termbox.Flush()
+	gui := gocui.NewGui()
+	if err := gui.Init(); err != nil {
 		panic(err)
 	}
-	defer g.Close()
-	g.SetLayout(GUILayout)
-	if err := KeyBindingsForGUI(g); err != nil {
+	defer gui.Close()
+	gui.SetLayout(GUILayout)
+	if err := KeyBindingsForGUI(gui); err != nil {
 		panic(err)
 	}
-	g.SelBgColor = gocui.ColorGreen
-	g.SelFgColor = gocui.ColorBlack
-	g.ShowCursor = true
+	gui.SelBgColor = gocui.ColorGreen
+	gui.SelFgColor = gocui.ColorBlack
+	gui.ShowCursor = true
 
-	err := g.MainLoop()
+	err := gui.MainLoop()
 	if err != nil && err != gocui.ErrorQuit {
 		panic(err)
 	}
@@ -121,6 +124,17 @@ func GUILayout(g *gocui.Gui) error {
 	return nil
 }
 
+func GUIUpdateLayout(g *gocui.Gui) error {
+	if err := g.DeleteView("main-view"); err != nil {
+		return err
+	}
+
+	if err := g.DeleteView("side-view"); err != nil {
+		return err
+	}
+	GUILayout(g)
+	return nil
+}
 func KeyBindingsForGUI(g *gocui.Gui) error {
 	if err := g.SetKeybinding("side-view", gocui.KeyCtrlSpace, 0, nextView); err != nil {
 		return err
@@ -314,6 +328,7 @@ func DecodePacket(pkt *pcap.Packet ) {
 					req, err := ParsePayload(pktString, ip, tcp, method)
 					if err == nil {
 						LogToFile(req)
+						go InitGUI()
 					}
 				}
 			}
@@ -326,12 +341,12 @@ func main () {
 	errWriter = bufio.NewWriter(os.Stderr)
 	handleToDevice := Init()
 	go InitGUI()
+	// InitGUI()
 	for {
 		pkt := handleToDevice.Next()
 		if pkt != nil {
 			pkt.Decode()
 			DecodePacket(pkt)
-			go InitGUI()
 		}
 	}
 }
