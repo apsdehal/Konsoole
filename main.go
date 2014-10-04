@@ -54,7 +54,7 @@ func InitGUI() {
 	}
 	defer g.Close()
 	g.SetLayout(GUILayout)
-	if err := keybindings(g); err != nil {
+	if err := KeyBindingsForGUI(g); err != nil {
 		panic(err)
 	}
 	g.SetBgColor = gocui.ColorGreen
@@ -108,6 +108,134 @@ func GUILayout(g *gocui.Gui) error {
 		}
 	}
 	return nil
+}
+
+func KeyBindingsForGUI(g *gocui.Gui) error {
+	if err := g.SetKeybinding("side-view", gocui.KeyCtrlSpace, 0, nextView); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding("main-view", gocui.KeyCtrlSpace, 0, nextView); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding("", gocui.KeyArrowDown, 0, cursorDown); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding("", gocui.KeyArrowUp, 0, cursorUp); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding("", gocui.KeyArrowLeft, 0, cursorLeft); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding("", gocui.KeyArrowRight, 0, cursorRight); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding("", gocui.KeyCtrlC, 0, quit); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding("side-view", gocui.KeyEnter, 0, getLine); err != nil {
+		return err
+	}
+	if err := g.SetKeybinding("msg", gocui.KeyEnter, 0, delMsg); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func nextView(g *gocui.Gui, v *gocui.View) error {
+	currentView := g.CurrentView()
+	if currentView == nil || currentView.Name() == "side-view" {
+		return g.SetCurrentView("main-view")
+	}
+	return g.SetCurrentView("side-view")
+}
+
+func cursorDown(g *gocui.Gui, v *gocui.View) error {
+	if v != nil {
+		cx, cy := v.Cursor()
+		if err := v.SetCursor(cx, cy+1); err != nil {
+			ox, oy := v.Origin()
+			if err := v.SetOrigin(ox, oy+1); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func cursorUp(g *gocui.Gui, v *gocui.View) error {
+	if v != nil {
+		ox, oy := v.Origin()
+		cx, cy := v.Cursor()
+		if err := v.SetCursor(cx, cy-1); err != nil && oy > 0 {
+			if err := v.SetOrigin(ox, oy-1); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func cursorLeft(g *gocui.Gui, v *gocui.View) error {
+	if v != nil {
+		ox, oy := v.Origin()
+		cx, cy := v.Cursor()
+		if err := v.SetCursor(cx-1, cy); err != nil && ox > 0 {
+			if err := v.SetOrigin(ox-1, oy); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func cursorRight(g *gocui.Gui, v *gocui.View) error {
+	if v != nil {
+		cx, cy := v.Cursor()
+		if err := v.SetCursor(cx+1, cy); err != nil {
+			ox, oy := v.Origin()
+			if err := v.SetOrigin(ox+1, oy); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func getLine(g *gocui.Gui, v *gocui.View) error {
+	var l string
+	var err error
+
+	_, cy := v.Cursor()
+	if l, err = v.Line(cy); err != nil {
+		l = ""
+	}
+
+	maxX, maxY := g.Size()
+	if v, err := g.SetView("msg", maxX/2-30, maxY/2, maxX/2+30, maxY/2+2); err != nil {
+		if err != gocui.ErrorUnkView {
+			return err
+		}
+		fmt.Fprintln(v, l)
+		if err := g.SetCurrentView("msg"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func delMsg(g *gocui.Gui, v *gocui.View) error {
+	if err := g.DeleteView("msg"); err != nil {
+		return err
+	}
+	if err := g.SetCurrentView("side-view"); err != nil {
+		return err
+	}
+	return nil
+}
+
+func quit(g *gocui.Gui, v *gocui.View) error {
+	return gocui.ErrorQuit
 }
 
 func StringFromPacket(pkt *pcap.Packet) string {
