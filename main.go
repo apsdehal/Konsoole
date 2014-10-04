@@ -18,7 +18,7 @@ var errWriter *bufio.Writer
 
 type Request struct {
 	DestIp    string
-	Time      time.Time
+	Time      string
 	Method 	  string
 	Host 	  string
 	HTTPType  int
@@ -49,7 +49,7 @@ func Init() *pcap.Pcap {
 
 func InitGUI() {
 	g := gocui.NewGui()
-	if err := g.Init(); err := nil {
+	if err := g.Init(); err != nil {
 		panic(err)
 	}
 	defer g.Close()
@@ -57,8 +57,8 @@ func InitGUI() {
 	if err := KeyBindingsForGUI(g); err != nil {
 		panic(err)
 	}
-	g.SetBgColor = gocui.ColorGreen
-	g.SetFgColor = gocui.ColorBlack
+	g.SelBgColor = gocui.ColorGreen
+	g.SelFgColor = gocui.ColorBlack
 	g.ShowCursor = true
 
 	err := g.MainLoop()
@@ -68,20 +68,19 @@ func InitGUI() {
 }
 
 func GUILayout(g *gocui.Gui) error {
-	var requestCount := map[string]int {
+	var requestCount = map[string]int {
 		"OPTIONS" : 0, "GET" : 0, "HEAD" : 0, "POST" : 0, "PUT" : 0, "DELETE" : 0, "TRACE" : 0, "CONNECT" : 0,
 	}
 	requests := []Request{}
-	content, err := ioutil.ReadFile("log.txt")
+	content, err := ioutil.ReadFile("./log.txt")
 	if err != nil {
 		panic(err)
 	}
-	lines := strings.Split(string(content), '\n')
-	var int k = 0
+	lines := strings.Split(string(content), "\n")
 	for _, line := range lines {
-		phrase := strings.Spilt(line, ' ')
+		phrase := strings.Split(line, " ")
 		requestCount[phrase[2]]++
-		requests = append(requests, Request{ phrase[0], phrase[1], phrase[2], phrase[3], phrase[4], phrase[5], phrase[6] })
+		requests = append(requests, Request{ phrase[0], phrase[1], phrase[2], phrase[3], int(phrase[4][0]), phrase[5], phrase[6] })
 	}
 
 	maxX, maxY :=  g.Size()
@@ -103,8 +102,8 @@ func GUILayout(g *gocui.Gui) error {
 		if err != gocui.ErrorUnkView {
 			return err
 		}
-		for _, count := range requestCount {
-			fmt.Fprintln(v, requestCount[count])
+		for key, value := range requestCount {
+			fmt.Fprintln(v, "%s : %s", key, value)
 		}
 	}
 	return nil
@@ -247,10 +246,7 @@ func StringFromPacket(pkt *pcap.Packet) string {
 }
 
 func ParsePayload(pktString string, ip *pcap.Iphdr, tcp *pcap.Tcphdr, method string) Request {
-	SrcIp    := ip.SrcAddr()
 	DestIp   := ip.DestAddr()
-	SrcPort  := tcp.SrcPort
-	DestPort := tcp.DestPort
 
 	reqRegex, _		  := regexp.Compile("/(.+)\\s+HTTP/1.([01])\\s+")
 	hostRegex, _      := regexp.Compile("Host: (.+)\\s+")
@@ -264,7 +260,7 @@ func ParsePayload(pktString string, ip *pcap.Iphdr, tcp *pcap.Tcphdr, method str
 
 	rp := Request{ 
 					DestIp, 
-					time.Now(), 
+					time.Now().String(), 
 					method,
 					host, 
 					int(httpType[0]), 
@@ -275,7 +271,8 @@ func ParsePayload(pktString string, ip *pcap.Iphdr, tcp *pcap.Tcphdr, method str
 }
 
 func LogToFile(r Request) {
-	f, err := os.OpenFile("log.txt", os.O_APPEND|os.O_WRONLY, 0600)
+	fmt.Println(os.Getwd())
+	f, err := os.OpenFile("log.txt", os.O_APPEND|os.O_WRONLY, 0777)
 	if err != nil {
 	    panic(err)
 	}
@@ -309,13 +306,14 @@ func DecodePacket(pkt *pcap.Packet ) {
 func main () {
 	outWriter = bufio.NewWriter(os.Stdout)
 	errWriter = bufio.NewWriter(os.Stderr)
-
+	f, err := os.OpenFile("log.txt", os.O_APPEND|os.O_WRONLY, 0777)
 	handleToDevice := Init()
 	for {
 		pkt := handleToDevice.Next()
 		if pkt != nil {
 			pkt.Decode()
 			DecodePacket(pkt)
+			InitGUI()
 		}
 	}
 }
