@@ -12,7 +12,7 @@ import (
 	"time"
 	"io/ioutil"
 	"errors"
-	"github.com/nsf/termbox-go"
+	"os/exec"
 )
 
 var outWriter *bufio.Writer 
@@ -51,7 +51,7 @@ func Init() *pcap.Pcap {
 }
 
 func InitGUI() {
-	termbox.Flush()
+	clearScreen()
 	gui := gocui.NewGui()
 	if err := gui.Init(); err != nil {
 		panic(err)
@@ -63,7 +63,7 @@ func InitGUI() {
 	}
 	gui.SelBgColor = gocui.ColorGreen
 	gui.SelFgColor = gocui.ColorBlack
-	gui.ShowCursor = true
+	// gui.Show	Cursor = true
 
 	err := gui.MainLoop()
 	if err != nil && err != gocui.ErrorQuit {
@@ -124,20 +124,9 @@ func GUILayout(g *gocui.Gui) error {
 	return nil
 }
 
-func GUIUpdateLayout(g *gocui.Gui) error {
-	if err := g.DeleteView("main-view"); err != nil {
-		return err
-	}
-
-	if err := g.DeleteView("side-view"); err != nil {
-		return err
-	}
-	GUILayout(g)
-	return nil
-}
 func KeyBindingsForGUI(g *gocui.Gui) error {
 	if err := g.SetKeybinding("side-view", gocui.KeyCtrlSpace, 0, nextView); err != nil {
-		return err
+			// return err
 	}
 	if err := g.SetKeybinding("main-view", gocui.KeyCtrlSpace, 0, nextView); err != nil {
 		return err
@@ -301,7 +290,7 @@ func ParsePayload(pktString string, ip *pcap.Iphdr, tcp *pcap.Tcphdr, method str
 	return rp, nil
 }
 
-func LogToFile(r Request) {
+func logToFile(r Request) {
 	f, err := os.OpenFile("log.txt", os.O_APPEND|os.O_WRONLY, 0777)
 	if err != nil {
 	    panic(err)
@@ -327,7 +316,7 @@ func DecodePacket(pkt *pcap.Packet ) {
 				if strings.Contains(pktString, method) {
 					req, err := ParsePayload(pktString, ip, tcp, method)
 					if err == nil {
-						LogToFile(req)
+						logToFile(req)
 						go InitGUI()
 					}
 				}
@@ -335,13 +324,17 @@ func DecodePacket(pkt *pcap.Packet ) {
 		}
 	}
 }
+func clearScreen() {
+    cmd := exec.Command("clear")
+    cmd.Stdout = os.Stdout
+    cmd.Run()
+}
 
 func main () {
 	outWriter = bufio.NewWriter(os.Stdout)
 	errWriter = bufio.NewWriter(os.Stderr)
 	handleToDevice := Init()
 	go InitGUI()
-	// InitGUI()
 	for {
 		pkt := handleToDevice.Next()
 		if pkt != nil {
