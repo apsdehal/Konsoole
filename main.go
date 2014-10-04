@@ -9,6 +9,7 @@ import (
 	"bufio"
 	"regexp"
 	"time"
+	"io/ioutil"
 )
 
 var outWriter *bufio.Writer 
@@ -87,6 +88,20 @@ func ParsePayload(pktString string, ip *pcap.Iphdr, tcp *pcap.Tcphdr, method str
 	return rp
 }
 
+func LogToFile(r Request) {
+	f, err := os.OpenFile("log.txt", os.O_APPEND|os.O_WRONLY, 0600)
+	if err != nil {
+	    panic(err)
+	}
+
+	defer f.Close()
+	format := "%s %s %s %s %s %d %s %s"
+	msg := fmt.Sprintf(format, r.Method, r.DestIp, r.DestPort, r.Time, r.Path, r.HTTPType, r.UserAgent )
+	if _, err = f.WriteString(msg); err != nil {
+	    panic(err)
+	}
+}
+
 func DecodePacket(pkt *pcap.Packet ) {
 	httpMethods := [...]string{"OPTIONS", "GET", "HEAD", "POST", "PUT", "DELETE", "TRACE", "CONNECT"}
 
@@ -98,7 +113,7 @@ func DecodePacket(pkt *pcap.Packet ) {
 			for _, method := range httpMethods {
 				if strings.Contains(pktString, method) {
 					req := ParsePayload(pktString, ip, tcp, method)
-					fmt.Println(req.Time)
+					LogToFile(req)
 				}
 			}
 		}
