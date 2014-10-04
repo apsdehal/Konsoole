@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/akrennmair/gopcap"
+	"github.com/jroimartin/gocui"
 	"fmt"
 	"strings"
 	"bytes"
@@ -49,6 +50,25 @@ func Init() *pcap.Pcap {
 	return handle
 }
 
+func InitGUI() {
+	g := gocui.NewGui()
+	if err := g.Init(); err := nil {
+		panic(err)
+	}
+	defer g.Close()
+	g.SetLayout(GUILayout)
+	if err := keybindings(g); err != nil {
+		panic(err)
+	}
+	g.SetBgColor = gocui.ColorGreen
+	g.SetFgColor = gocui.ColorBlack
+	g.ShowCursor = true
+
+	err := g.MainLoop()
+	if err != nil && err != gocui.ErrorQuit {
+		panic(err)
+	}
+}
 func StringFromPacket(pkt *pcap.Packet) string {
 	buf := bytes.NewBufferString("")
 	for i := uint32(0); int(i) < len(pkt.Data); i++ {
@@ -95,7 +115,7 @@ func LogToFile(r Request) {
 	}
 
 	defer f.Close()
-	format := "%s %s %s %s %s %d %s %s"
+	format := "%s %s %s %s %s %d %s %s\n"
 	msg := fmt.Sprintf(format, r.Method, r.DestIp, r.DestPort, r.Time, r.Path, r.HTTPType, r.UserAgent )
 	if _, err = f.WriteString(msg); err != nil {
 	    panic(err)
