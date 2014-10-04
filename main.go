@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"time"
 	"io/ioutil"
+	"errors"
 )
 
 var outWriter *bufio.Writer 
@@ -72,15 +73,20 @@ func GUILayout(g *gocui.Gui) error {
 		"OPTIONS" : 0, "GET" : 0, "HEAD" : 0, "POST" : 0, "PUT" : 0, "DELETE" : 0, "TRACE" : 0, "CONNECT" : 0,
 	}
 	requests := []Request{}
+
 	content, err := ioutil.ReadFile("./log.txt")
 	if err != nil {
 		panic(err)
 	}
 	lines := strings.Split(string(content), "\n")
 	for _, line := range lines {
-		phrase := strings.Split(line, " ")
+		if len(line) == 0 {
+			break;
+		}
+		phrase := strings.SplitN(line, " ", 7)
 		requestCount[phrase[2]]++
-		requests = append(requests, Request{ phrase[0], phrase[1], phrase[2], phrase[3], int(phrase[4][0]), phrase[5], phrase[6] })
+		// fmt.Println(phrase)
+		requests = append(requests, Request{ phrase[0], phrase[1], phrase[2], phrase[3], int(phrase[4][0]), phrase[6], phrase[5] })
 	}
 
 	maxX, maxY :=  g.Size()
@@ -90,7 +96,7 @@ func GUILayout(g *gocui.Gui) error {
 			return err
 		}
 		for _, request := range requests {
-			fmt.Fprintln(v, "%s %s", request.Method, request.Host)
+			fmt.Fprintln(v, request.Method, ":", request.Host)
 		}
 		v.Highlight = true
 		if err := g.SetCurrentView("main-view"); err != nil {
@@ -103,7 +109,7 @@ func GUILayout(g *gocui.Gui) error {
 			return err
 		}
 		for key, value := range requestCount {
-			fmt.Fprintln(v, "%s : %s", key, value)
+			fmt.Fprintln(v, "%.8s %s", key, value)
 		}
 	}
 	return nil
@@ -245,33 +251,42 @@ func StringFromPacket(pkt *pcap.Packet) string {
 	return string(buf.Bytes())
 }
 
-func ParsePayload(pktString string, ip *pcap.Iphdr, tcp *pcap.Tcphdr, method string) Request {
+func ParsePayload(pktString string, ip *pcap.Iphdr, tcp *pcap.Tcphdr, method string) (Request, error) {
 	DestIp   := ip.DestAddr()
 
-	reqRegex, _		  := regexp.Compile("/(.+)\\s+HTTP/1.([01])\\s+")
+	reqRegex, _		  := regexp.Compile("/(.+)\\s+HTTP/1.([0-1])\\s+")
 	hostRegex, _      := regexp.Compile("Host: (.+)\\s+")
-	useragentRegex, _ := regexp.Compile("User-Agent:(.+)")
+	useragentRegex, _ := regexp.Compile("User-Agent: (.+)")
 
-	host 	  := hostRegex.FindStringSubmatch(pktString)[1] 
+	host	  := hostRegex.FindStringSubmatch(pktString)[1] 
 	useragent := useragentRegex.FindStringSubmatch(pktString)[1] 
 	req  	  := reqRegex.FindStringSubmatch(pktString) 
-	path 	  := req[1]
-	httpType  := req[2]
+	
+	if len(req) == 0 {
+		return Request{}, errors.New("not correct")
+	}
+	
+	path 	    := req[1]
+	httpType    := req[2]
 
+	// fmt.Println(DestIp)
+	// fmt.Println(method)
+	// fmt.Println(host)
+	// fmt.Println(httpType[0])
+	// fmt.Println(useragent)
 	rp := Request{ 
 					DestIp, 
-					time.Now().String(), 
+					time.Now().Format(time.RFC3339), 
 					method,
 					host, 
-					int(httpType[0]), 
+					int(httpType[0]) - '0', 
 					useragent, 
 					path,
 				}
-	return rp
+	return rp, nil
 }
 
 func LogToFile(r Request) {
-	fmt.Println(os.Getwd())
 	f, err := os.OpenFile("log.txt", os.O_APPEND|os.O_WRONLY, 0777)
 	if err != nil {
 	    panic(err)
@@ -279,7 +294,7 @@ func LogToFile(r Request) {
 
 	defer f.Close()
 	format := "%s %s %s %s %d %s %s\n"
-	msg := fmt.Sprintf(format, r.DestIp, r.Time, r.Method, r.Host, r.HTTPType, r.UserAgent, r.Path )
+	msg := fmt.Sprintf(format, r.DestIp, r.Time, r.Method, r.Host, r.HTTPType, r.Path, r.UserAgent )
 	if _, err = f.WriteString(msg); err != nil {
 	    panic(err)
 	}
@@ -295,8 +310,10 @@ func DecodePacket(pkt *pcap.Packet ) {
 			pktString := StringFromPacket(pkt)
 			for _, method := range httpMethods {
 				if strings.Contains(pktString, method) {
-					req := ParsePayload(pktString, ip, tcp, method)
-					LogToFile(req)
+					req, err := ParsePayload(pktString, ip, tcp, method)
+					if err == nil {
+						LogToFile(req)
+					}
 				}
 			}
 		}
@@ -306,14 +323,14 @@ func DecodePacket(pkt *pcap.Packet ) {
 func main () {
 	outWriter = bufio.NewWriter(os.Stdout)
 	errWriter = bufio.NewWriter(os.Stderr)
-	f, err := os.OpenFile("log.txt", os.O_APPEND|os.O_WRONLY, 0777)
-	handleToDevice := Init()
-	for {
-		pkt := handleToDevice.Next()
-		if pkt != nil {
-			pkt.Decode()
-			DecodePacket(pkt)
-			InitGUI()
-		}
-	}
+	// handleToDevice := Init()
+	InitGUI()
+
+	// for {
+	// 	pkt := handleToDevice.Next()
+	// 	if pkt != nil {
+	// 		pkt.Decode()
+	// 		DecodePacket(pkt)
+	// 	}
+	// }
 }
