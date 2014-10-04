@@ -17,10 +17,7 @@ var outWriter *bufio.Writer
 var errWriter *bufio.Writer
 
 type Request struct {
-	SrcIp     string
 	DestIp    string
-	SrcPort   uint16
-	DestPort  uint16
 	Time      time.Time
 	Method 	  string
 	Host 	  string
@@ -69,6 +66,50 @@ func InitGUI() {
 		panic(err)
 	}
 }
+
+func GUILayout(g *gocui.Gui) error {
+	var requestCount := map[string]int {
+		"OPTIONS" : 0, "GET" : 0, "HEAD" : 0, "POST" : 0, "PUT" : 0, "DELETE" : 0, "TRACE" : 0, "CONNECT" : 0,
+	}
+	requests := []Request{}
+	content, err := ioutil.ReadFile("log.txt")
+	if err != nil {
+		panic(err)
+	}
+	lines := strings.Split(string(content), '\n')
+	var int k = 0
+	for _, line := range lines {
+		phrase := strings.Spilt(line, ' ')
+		requestCount[phrase[2]]++
+		requests = append(requests, Request{ phrase[0], phrase[1], phrase[2], phrase[3], phrase[4], phrase[5], phrase[6] })
+	}
+
+	maxX, maxY :=  g.Size()
+	
+	if v, err := g.SetView("main-view", 30, -1, maxX, maxY); err != nil {
+		if err != gocui.ErrorUnkView {
+			return err
+		}
+		for _, request := range requests {
+			fmt.Fprintln(v, "%s %s", request.Method, request.Host)
+		}
+		v.Highlight = true
+		if err := g.SetCurrentView("main-view"); err != nil {
+			return err
+		}
+	}
+	
+	if v, err := g.SetView("side-view", -1, -1, 30, maxY); err != nil {
+		if err != gocui.ErrorUnkView {
+			return err
+		}
+		for _, count := range requestCount {
+			fmt.Fprintln(v, requestCount[count])
+		}
+	}
+	return nil
+}
+
 func StringFromPacket(pkt *pcap.Packet) string {
 	buf := bytes.NewBufferString("")
 	for i := uint32(0); int(i) < len(pkt.Data); i++ {
@@ -94,10 +135,7 @@ func ParsePayload(pktString string, ip *pcap.Iphdr, tcp *pcap.Tcphdr, method str
 	httpType  := req[2]
 
 	rp := Request{ 
-					SrcIp, 
 					DestIp, 
-					SrcPort, 
-					DestPort, 
 					time.Now(), 
 					method,
 					host, 
@@ -115,8 +153,8 @@ func LogToFile(r Request) {
 	}
 
 	defer f.Close()
-	format := "%s %s %s %s %s %d %s %s\n"
-	msg := fmt.Sprintf(format, r.Method, r.DestIp, r.DestPort, r.Time, r.Path, r.HTTPType, r.UserAgent )
+	format := "%s %s %s %s %d %s %s\n"
+	msg := fmt.Sprintf(format, r.DestIp, r.Time, r.Method, r.Host, r.HTTPType, r.UserAgent, r.Path )
 	if _, err = f.WriteString(msg); err != nil {
 	    panic(err)
 	}
