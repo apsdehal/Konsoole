@@ -11,7 +11,7 @@ var outWriter *bufio.Writer
 var errWriter *bufio.Writer
 var fileToOpen string
 
-func main () {
+func main() {
 
 	fileToSave := flag.String("f", "", "Custom log file")
 	flag.Parse()

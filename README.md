@@ -2,26 +2,43 @@
 
 HTTP monitoring console written in Go. Useful for sniffing and analysis purposes
 
+- Written in Go
+- Can write to a custom log file
+- Shows all HTTP traffic
+- Counts no of type of HTTP Request Method
+
 ![Example Output](extra/demo.png)
 
-## Install
+## Installation and Usage
 
 Just run
 
 ```
 go get github.com/apsdehal/Konsoole
 ```
+> Installs Konsoole to your machine
 
-and you are ready to go. Now run it via
+*Using Konsoole requires sudo privileges as it binds to network interface*
+
+Now run it via
 
 ```
-Konsoole
+sudo Konsoole
 ```
+Now select one of the possible network interface, most common ones are `wlan0` and `eth0`
+
+```
+sudo Konsoole -t=logfile.txt
+```
+> Use this flag to log *extra analysis and data* to a custom log file
 
 ## Dependencies
 
+- libpcap-dev library
 - [akrenmair/gopcap](github.com/akrennmair/gopcap)
 - [jroimartin/gocui](github.com/jroimartin/gocui)
+
+Uses gocui for ncurses bindings and gopcap for pcap bindings 
 
 ## Inspiration
 
