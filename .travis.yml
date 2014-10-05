@@ -1,2 +1,5 @@
 language: go
 go: 1.2
+install:
+  - sudo apt-get install libpcap-dev
+  - go get -v ./...
