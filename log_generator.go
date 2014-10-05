@@ -1,3 +1,4 @@
+// Logger module used for logging various requests to a log file
 package main
 
 import (
@@ -5,6 +6,7 @@ import (
 	"fmt"
 )
 
+// Takes a request and logs it to a mentioned file
 func logToFile(r Request) {
 	f, err := os.OpenFile(fileToOpen, os.O_APPEND|os.O_WRONLY, 0777)
 	if err != nil {

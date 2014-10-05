@@ -1,3 +1,4 @@
+// GUI module that uses ncurses deep down to create a CUI
 package main
 
 import (
@@ -9,8 +10,10 @@ import (
 	"os"
 )
 
+// Global var for GUI
 var gui *gocui.Gui
 
+// Initializes the GUI by setting a layout and other keybindings 
 func InitGUI() {
 	clearScreen()
 	gui := gocui.NewGui()
@@ -33,6 +36,7 @@ func InitGUI() {
 	}
 }
 
+// Layout for GUI and parses the log file for the requests 
 func GUILayout(g *gocui.Gui) error {
 	var requestCount = map[string]int {
 		"OPTIONS" : 0, "GET" : 0, "HEAD" : 0, "POST" : 0, "PUT" : 0, "DELETE" : 0, "TRACE" : 0, "CONNECT" : 0,
@@ -50,7 +54,6 @@ func GUILayout(g *gocui.Gui) error {
 		}
 		phrase := strings.SplitN(line, " ", 7)
 		requestCount[phrase[2]]++
-		// fmt.Println(phrase)
 		requests = append(requests, Request{ phrase[0], phrase[1], phrase[2], phrase[3], int(phrase[4][0]), phrase[6], phrase[5] })
 	}
 
@@ -88,6 +91,7 @@ func GUILayout(g *gocui.Gui) error {
 	return nil
 }
 
+// Adds key bindings for the GUI
 func KeyBindingsForGUI(g *gocui.Gui) error {
 	if err := g.SetKeybinding("", gocui.KeyArrowDown, 0, cursorDown); err != nil {
 		return err

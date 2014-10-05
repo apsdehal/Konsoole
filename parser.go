@@ -1,3 +1,4 @@
+// Parser module used for parsing of HTTP packets 
 package main 
 
 import (
@@ -11,6 +12,7 @@ import (
 	"os"
 )
 
+// Defines a typical request structure
 type Request struct {
 	DestIp    string
 	Time      string
@@ -21,6 +23,8 @@ type Request struct {
 	Path 	  string
 }
 
+// Initializes the network interface by finding all the available devices
+// displays them to user and finally selects one of them as per the user
 func Init() *pcap.Pcap {
 	devices, err := pcap.Findalldevs()
 	if err != nil {
@@ -51,6 +55,7 @@ func Init() *pcap.Pcap {
 	return handle
 }
 
+// Converts packet to a proper string and returns it
 func StringFromPacket(pkt *pcap.Packet) string {
 	buf := bytes.NewBufferString("")
 	for i := uint32(0); int(i) < len(pkt.Data); i++ {
@@ -59,6 +64,7 @@ func StringFromPacket(pkt *pcap.Packet) string {
 	return string(buf.Bytes())
 }
 
+// Parse the string from request and decodes it into a structured request using regex
 func ParsePayload(pktString string, ip *pcap.Iphdr, tcp *pcap.Tcphdr, method string) (Request, error) {
 	DestIp   := ip.DestAddr()
 
@@ -89,7 +95,9 @@ func ParsePayload(pktString string, ip *pcap.Iphdr, tcp *pcap.Tcphdr, method str
 	return rp, nil
 }
 
-func DecodePacket(pkt *pcap.Packet ) {
+// Decodes a packet and checks for IP, TCP , 80 Destination port and finally HTTP request method to find a valid HTTP request
+// If found uses a go routine to reinitialize the GUI
+func DecodePacket(pkt *pcap.Packet) {
 	httpMethods := [...]string{"OPTIONS", "GET", "HEAD", "POST", "PUT", "DELETE", "TRACE", "CONNECT"}
 
 	if len(pkt.Headers) == 2 {
