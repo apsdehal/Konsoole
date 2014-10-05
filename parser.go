@@ -26,10 +26,8 @@ type Request struct {
 // Initializes the network interface by finding all the available devices
 // displays them to user and finally selects one of them as per the user
 func Init() *pcap.Pcap {
-	devices, err := pcap.Findalldevs()
-	if err != nil {
-		fmt.Fprintf(errWriter, "[-] Error, pcap failed to iniaitilize")
-	}
+
+	devices := getDevices()
 
 	if len(devices) == 0 {
 		fmt.Fprintf(errWriter, "[-] No devices found, quitting!")
@@ -47,14 +45,27 @@ func Init() *pcap.Pcap {
 
 	fmt.Scanf("%d", &index)
 
+	handle := getHandle(devices, index)
+
+	return handle
+}
+
+func getDevices() (devices []pcap.Interface) {
+	devices, err := pcap.Findalldevs()
+	if err != nil {
+		fmt.Fprintf(errWriter, "[-] Error, pcap failed to iniaitilize")
+	}
+	return devices
+}
+
+func getHandle(devices []pcap.Interface, index int) *pcap.Pcap {
 	handle, err := pcap.Openlive(devices[index-1].Name, 65535, true, 0)
 	if err != nil {
 		fmt.Fprintf(errWriter, "Konsoole: %s\n", err)
 		errWriter.Flush()
 	}
 	return handle
-}
-
+} 
 // Converts packet to a proper string and returns it
 func StringFromPacket(pkt *pcap.Packet) string {
 	buf := bytes.NewBufferString("")
