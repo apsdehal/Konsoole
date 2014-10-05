@@ -1,4 +1,4 @@
-# Konsoole
+# Konsoole [![Build Status](https://travis-ci.org/apsdehal/Konsoole.svg?branch=master)](https://travis-ci.org/apsdehal/Konsoole)
 
 HTTP monitoring console written in Go. Useful for sniffing and analysis purposes
 
@@ -35,8 +35,8 @@ sudo Konsoole -t=logfile.txt
 ## Dependencies
 
 - libpcap-dev library
-- [akrenmair/gopcap](github.com/akrennmair/gopcap)
-- [jroimartin/gocui](github.com/jroimartin/gocui)
+- [akrenmair/gopcap](http://github.com/akrennmair/gopcap)
+- [jroimartin/gocui](http://github.com/jroimartin/gocui)
 
 Uses gocui for ncurses bindings and gopcap for pcap bindings 
 
