@@ -5,7 +5,6 @@ import (
 	"github.com/jroimartin/gocui"
 	"fmt"
 	"strings"
-	"io/ioutil"
 	"os/exec"
 	"os"
 )
@@ -38,24 +37,9 @@ func InitGUI() {
 
 // Layout for GUI and parses the log file for the requests 
 func GUILayout(g *gocui.Gui) error {
-	var requestCount = map[string]int {
-		"OPTIONS" : 0, "GET" : 0, "HEAD" : 0, "POST" : 0, "PUT" : 0, "DELETE" : 0, "TRACE" : 0, "CONNECT" : 0,
-	}
-	requests := []Request{}
+	
 
-	content, err := ioutil.ReadFile(fileToOpen)
-	if err != nil {
-		panic(err)
-	}
-	lines := strings.Split(string(content), "\n")
-	for _, line := range lines {
-		if len(line) == 0 {
-			break;
-		}
-		phrase := strings.SplitN(line, " ", 7)
-		requestCount[phrase[2]]++
-		requests = append(requests, Request{ phrase[0], phrase[1], phrase[2], phrase[3], int(phrase[4][0]), phrase[6], phrase[5] })
-	}
+	requests, requestCount := getLogsFromFile()
 
 	maxX, maxY :=  g.Size()
 	
