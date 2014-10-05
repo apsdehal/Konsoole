@@ -27,9 +27,9 @@ type Request struct {
 // displays them to user and finally selects one of them as per the user
 func Init() *pcap.Pcap {
 
-	devices := getDevices()
+	devices, err := getDevices()
 
-	if len(devices) == 0 {
+	if len(devices) == 0 || err!= nil {
 		fmt.Fprintf(errWriter, "[-] No devices found, quitting!")
 		os.Exit(1)
 	}
@@ -45,21 +45,23 @@ func Init() *pcap.Pcap {
 
 	fmt.Scanf("%d", &index)
 
-	handle := getHandle(devices, index)
+	handle := getHandle(devices[index-1])
 
 	return handle
 }
 
-func getDevices() (devices []pcap.Interface) {
+// Returns all the devices found for interface
+func getDevices() ([]pcap.Interface, error) {
 	devices, err := pcap.Findalldevs()
 	if err != nil {
 		fmt.Fprintf(errWriter, "[-] Error, pcap failed to iniaitilize")
 	}
-	return devices
+	return devices, err
 }
 
-func getHandle(devices []pcap.Interface, index int) *pcap.Pcap {
-	handle, err := pcap.Openlive(devices[index-1].Name, 65535, true, 0)
+// Gets the handle on one of the device
+func getHandle(device pcap.Interface) *pcap.Pcap {
+	handle, err := pcap.Openlive(device.Name, 65535, true, 0)
 	if err != nil {
 		fmt.Fprintf(errWriter, "Konsoole: %s\n", err)
 		errWriter.Flush()
