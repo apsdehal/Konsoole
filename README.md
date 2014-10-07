@@ -28,9 +28,15 @@ sudo Konsoole
 Now select one of the possible network interface, most common ones are `wlan0` and `eth0`
 
 ```
-sudo Konsoole -t=logfile.txt
+sudo Konsoole -t logfile.txt
 ```
 > Use this flag to log *extra analysis and data* to a custom log file
+
+*Important: This package needs _libpcap-dev_ library installed for your distribution*
+
+### Testing
+
+Run `go test` for tests on Konsoole.
 
 ## Dependencies
 
@@ -43,6 +49,10 @@ Uses gocui for ncurses bindings and gopcap for pcap bindings
 ## Inspiration
 
 Inspired from Python port of this logger [pravj/Doga](http://github.com/pravj/Doga)
+
+## Issues
+
+Currently the major issue with Konsoole is overflow of terminal buffer, I am working on a fix for it. [Issue #2](https://github.com/apsdehal/Konsoole/issues/2) refers to this.
 
 ## License
 
