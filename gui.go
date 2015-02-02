@@ -15,32 +15,33 @@ var gui *gocui.Gui
 // Initializes the GUI by setting a layout and other keybindings
 func InitGUI() {
 	clearScreen()
+	if gui == nil {
+		gui := gocui.NewGui()
+		if err := gui.Init(); err != nil {
+			panic(err)
+		}
+		defer gui.Close()
 
-	gui := gocui.NewGui()
+		gui.SetLayout(GUILayout)
 
-	if err := gui.Init(); err != nil {
-		panic(err)
+		if err := KeyBindingsForGUI(gui); err != nil {
+			panic(err)
+		}
+
+		gui.SelBgColor = gocui.ColorGreen
+		gui.SelFgColor = gocui.ColorBlack
+		// gui.Show	Cursor = true
+
+		err := gui.MainLoop()
+
+		if err != nil && err != gocui.Quit {
+			panic(err)
+		}
+	} else {
+		gui.Flush()
 	}
 
-	gui.Flush()
 
-	defer gui.Close()
-
-	gui.SetLayout(GUILayout)
-
-	if err := KeyBindingsForGUI(gui); err != nil {
-		panic(err)
-	}
-
-	gui.SelBgColor = gocui.ColorGreen
-	gui.SelFgColor = gocui.ColorBlack
-	// gui.Show	Cursor = true
-
-	err := gui.MainLoop()
-
-	if err != nil && err != gocui.Quit {
-		panic(err)
-	}
 }
 
 // Layout for GUI and parses the log file for the requests
@@ -51,43 +52,50 @@ func GUILayout(g *gocui.Gui) error {
 	maxX, maxY :=  g.Size()
 
 	if v, err := g.SetView("main-view", 15, -1, maxX, maxY); err != nil {
-		v.Clear()
 		if err != gocui.ErrorUnkView {
 			return err
 		}
-		for _, request := range requests {
-			timeWithZone := strings.Split(request.Time, "T")
-			dateWithYear := timeWithZone[0]
-			date := strings.SplitN(dateWithYear, "-", 2)[1]
-			time := strings.Split(timeWithZone[1], "+")[0]
-			fmt.Fprintf(v, "%s %s ▶ %s : %s\n", date, time, request.Method, request.Host)
-		}
-		v.Highlight = true
-		if err := g.SetCurrentView("main-view"); err != nil {
-			return err
-		}
+
+		setMainView(g, v, requests)
 	}
 
 	if v, err := g.SetView("side-view", -1, -1, 15, maxY); err != nil {
-		v.Clear()
 		if err != gocui.ErrorUnkView {
 			return err
 		}
-		for key, value := range requestCount {
-			if value != 0 {
-				fmt.Fprintf(v, "%-8s %d\n", key, value)
-			}
-		}
+
+		setSideView(v, requestCount)
 	}
 	return nil
 }
 
-func setSideView(v *gocui.View) {
-	v.Clear()
+func regenerateLayout(g *gocui.Gui) error {
+	requests, requestCount := getLogsFromFile()
+	v, err := g.View("main-view")
 
-	if err != gocui.ErrorUnkView {
+	if err != nil {
 		return err
 	}
+
+	err = setMainView(g, v, requests)
+
+	if err != nil {
+		return err
+	}
+
+	v, err = g.View("side-view")
+
+	if err != nil {
+		return err
+	}
+
+	setSideView(v, requestCount)
+
+	return nil
+}
+
+func setSideView(v *gocui.View, requestCount map[string]int) {
+	v.Clear()
 
 	for key, value := range requestCount {
 		if value != 0 {
@@ -97,12 +105,9 @@ func setSideView(v *gocui.View) {
 
 }
 
-func setMainView(v *gocui.View) {
+func setMainView(g *gocui.Gui, v *gocui.View, requests []Request) error {
 	v.Clear()
 
-	if err != gocui.ErrorUnkView {
-		return err
-	}
 
 	for _, request := range requests {
 		timeWithZone := strings.Split(request.Time, "T")
@@ -117,6 +122,8 @@ func setMainView(v *gocui.View) {
 	if err := g.SetCurrentView("main-view"); err != nil {
 		return err
 	}
+
+	return nil
 
 }
 

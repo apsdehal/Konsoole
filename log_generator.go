@@ -29,12 +29,14 @@ func getLogsFromFile() ([]Request, map[string]int) {
 	}
 
 	requests := []Request{}
-
 	content, err := ioutil.ReadFile(fileToOpen)
+
 	if err != nil {
 		panic(err)
 	}
+
 	lines := strings.Split(string(content), "\n")
+
 	for _, line := range lines {
 		if len(line) == 0 {
 			break;
@@ -43,5 +45,6 @@ func getLogsFromFile() ([]Request, map[string]int) {
 		requestCount[phrase[2]]++
 		requests = append(requests, Request{ phrase[0], phrase[1], phrase[2], phrase[3], int(phrase[4][0]), phrase[6], phrase[5] })
 	}
+
 	return requests, requestCount
 }
