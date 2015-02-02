@@ -12,7 +12,7 @@ import (
 // Global var for GUI
 var gui *gocui.Gui
 
-// Initializes the GUI by setting a layout and other keybindings 
+// Initializes the GUI by setting a layout and other keybindings
 func InitGUI() {
 	clearScreen()
 	gui := gocui.NewGui()
@@ -30,19 +30,19 @@ func InitGUI() {
 	// gui.Show	Cursor = true
 
 	err := gui.MainLoop()
-	if err != nil && err != gocui.ErrorQuit {
+	if err != nil && err != gocui.Quit {
 		panic(err)
 	}
 }
 
-// Layout for GUI and parses the log file for the requests 
+// Layout for GUI and parses the log file for the requests
 func GUILayout(g *gocui.Gui) error {
-	
+
 
 	requests, requestCount := getLogsFromFile()
 
 	maxX, maxY :=  g.Size()
-	
+
 	if v, err := g.SetView("main-view", 15, -1, maxX, maxY); err != nil {
 		v.Clear()
 		if err != gocui.ErrorUnkView {
@@ -60,7 +60,7 @@ func GUILayout(g *gocui.Gui) error {
 			return err
 		}
 	}
-	
+
 	if v, err := g.SetView("side-view", -1, -1, 15, maxY); err != nil {
 		v.Clear()
 		if err != gocui.ErrorUnkView {
@@ -151,7 +151,7 @@ func delMsg(g *gocui.Gui, v *gocui.View) error {
 }
 
 func quit(g *gocui.Gui, v *gocui.View) error {
-	return gocui.ErrorQuit
+	return gocui.Quit
 }
 
 func clearScreen() {
