@@ -11,12 +11,22 @@ HTTP monitoring console written in Go. Useful for sniffing and analysis purposes
 
 ## Installation and Usage
 
+*libpacp-dev* is required for running Konsoole
+
+For linux debian based distros, run:
+
+```
+sudo apt-get install libpacp-dev
+```
+
+```
 Just run
 
 ```
 go get github.com/apsdehal/Konsoole
 ```
-> Installs Konsoole to your machine
+
+This will install  Konsoole to your go distro's bin directory or in your pkgset bin directory if you are using gvm.
 
 *Using Konsoole requires sudo privileges as it binds to network interface*
 
